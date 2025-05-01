@@ -1,22 +1,17 @@
-// Gold price API service
-
-// API configuration - replace with your actual API key and endpoint
 const API_CONFIG = {
-  // Common gold price APIs include:
-  // - Gold API (goldapi.io)
-  // - Metals API (metals-api.com)
-  // - Alpha Vantage (alphavantage.co)
-  endpoint: "https://api.example.com/v1/gold", // Replace with actual API endpoint
-  apiKey: "YOUR_API_KEY", // Replace with your actual API key
-  currency: "USD",
+  endpoint: "https://www.goldapi.io/api/XAU/USD",
+  apiKey: "goldapi-6j5sma3r30d1-io",
 }
 
 export interface GoldPriceData {
   timestamp: number
+  price: number
   currency: string
-  rates: {
-    XAU: number // Gold price per troy ounce
-  }
+  exchange: string
+  metal: string
+  prev_close_price?: number
+  ch?: number
+  chp?: number
 }
 
 export interface GoldRatesByKarat {
@@ -25,32 +20,20 @@ export interface GoldRatesByKarat {
   "24K": { buyPrice: number; sellPrice: number }
 }
 
-/**
- * Fetches the latest gold prices from the API
- */
 export async function fetchGoldPrices(currency = "USD"): Promise<GoldPriceData> {
   try {
-    // In a real implementation, you would use your actual API endpoint and key
-    // For demonstration, we'll simulate an API response
-
-    // Uncomment and modify this code when you have a real API key
-    /*
-    const response = await fetch(`${API_CONFIG.endpoint}?currency=${currency}`, {
+    const response = await fetch(`https://www.goldapi.io/api/XAU/${currency}`, {
       headers: {
-        'Authorization': `Bearer ${API_CONFIG.apiKey}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
-    
-    return await response.json();
-    */
+        "x-access-token": API_CONFIG.apiKey,
+        "Content-Type": "application/json",
+      },
+    })
 
-    // Simulated response for demonstration
-    return simulateGoldPriceResponse(currency)
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`)
+    }
+
+    return await response.json()
   } catch (error) {
     console.error("Error fetching gold prices:", error)
     throw error
@@ -63,19 +46,15 @@ export async function fetchGoldPrices(currency = "USD"): Promise<GoldPriceData> 
  * @returns Object with prices for different karats
  */
 export function convertToKaratPrices(goldPricePerOz: number): GoldRatesByKarat {
-  // Gold purity factors
   const purityFactors = {
-    "18K": 0.75, // 18K gold is 75% pure
-    "22K": 0.9167, // 22K gold is 91.67% pure
-    "24K": 0.9999, // 24K gold is 99.99% pure (essentially pure gold)
+    "18K": 0.75,
+    "22K": 0.9167,
+    "24K": 0.9999,
   }
 
-  // Convert from troy ounce to gram (1 troy oz = 31.1034768 grams)
   const goldPricePerGram = goldPricePerOz / 31.1034768
 
-  // Calculate buy and sell prices with a small spread
-  // Typically, sell prices are lower than buy prices
-  const spread = 0.05 // 5% spread between buy and sell
+  const spread = 0.05
 
   return {
     "18K": {
@@ -89,32 +68,6 @@ export function convertToKaratPrices(goldPricePerOz: number): GoldRatesByKarat {
     "24K": {
       buyPrice: Number.parseFloat((goldPricePerGram * purityFactors["24K"]).toFixed(2)),
       sellPrice: Number.parseFloat((goldPricePerGram * purityFactors["24K"] * (1 - spread)).toFixed(2)),
-    },
-  }
-}
-
-/**
- * Simulates a gold price API response for demonstration
- * In production, replace this with actual API calls
- */
-function simulateGoldPriceResponse(currency: string): GoldPriceData {
-  // Base gold price in USD per troy ounce (approximate market value)
-  const baseGoldPrice = 2300 + (Math.random() * 100 - 50) // Random fluctuation
-
-  // Simple currency conversion factors (for demonstration only)
-  const conversionRates: Record<string, number> = {
-    USD: 1,
-    SAR: 3.75,
-    EGP: 48.5,
-  }
-
-  const rate = conversionRates[currency] || 1
-
-  return {
-    timestamp: Date.now(),
-    currency: currency,
-    rates: {
-      XAU: baseGoldPrice * rate,
     },
   }
 }
