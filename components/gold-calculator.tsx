@@ -12,6 +12,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { fetchGoldPrices, convertToKaratPrices, fetchExchangeRates } from "@/lib/api"
 import { useTranslations } from "@/lib/i18n/use-translations"
 import { LanguageToggle } from "./language-toggle"
+import Image from "next/image"
+
 
 type KaratType = "18K" | "21K" | "24K"
 type CurrencyType = "USD" | "SAR" | "EGP"
@@ -270,7 +272,7 @@ export default function GoldCalculator() {
       <div className="flex flex-col md:flex-row items-center justify-between mb-8">
         <div className="flex items-center mb-4 md:mb-0">
           <div className="w-16 h-16 mr-4">
-            <img src="/assets/logo/logo.png" alt="Gold Logo" width={64} height={64} />
+             <Image src="/assets/logo/logo.svg" alt="Gold Logo" width={64} height={64} className="object-contain" />
           </div>
           <h1 className="text-3xl font-semibold text-[#D4AF37]">{translations.title}</h1>
         </div>

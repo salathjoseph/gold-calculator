@@ -1387,6 +1387,9 @@ video {
 .fill-current {
   fill: currentColor;
 }
+.object-contain {
+  object-fit: contain;
+}
 .p-0 {
   padding: 0px;
 }
