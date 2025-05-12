@@ -10,11 +10,11 @@ import { Button } from "@/components/ui/button"
 import { RefreshCw, Settings, HelpCircle, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import Image from "next/image"
-import { fetchGoldPrices, convertToKaratPrices } from "@/lib/api"
+import { fetchGoldPrices, convertToKaratPrices, fetchExchangeRates } from "@/lib/api"
 import { useTranslations } from "@/lib/i18n/use-translations"
 import { LanguageToggle } from "./language-toggle"
 
-type KaratType = "18K" | "22K" | "24K"
+type KaratType = "18K" | "21K" | "24K"
 type CurrencyType = "USD" | "SAR" | "EGP"
 
 interface GoldRate {
@@ -34,27 +34,32 @@ interface GoldEntry {
 
 export default function GoldCalculator() {
   const { locale, translations, dir, toggleLocale } = useTranslations()
+
   const [usdToSar, setUsdToSar] = useState<number>(3.75)
-  const [usdToEgp, setUsdToEgp] = useState<number>(48.5)
+  const [usdToEgp, setUsdToEgp] = useState<number>(30.9)
+  const [isLoadingRates, setIsLoadingRates] = useState<boolean>(false)
+
   const [currency, setCurrency] = useState<CurrencyType>("USD")
+
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+
   const [egyptRates, setEgyptRates] = useState<GoldRate[]>([
     { karat: "18K", buyPrice: 29, sellPrice: 27 },
-    { karat: "22K", buyPrice: 31, sellPrice: 29 },
+    { karat: "21K", buyPrice: 31, sellPrice: 29 },
     { karat: "24K", buyPrice: 32, sellPrice: 30 },
   ])
 
   const [internationalRates, setInternationalRates] = useState<GoldRate[]>([
     { karat: "18K", buyPrice: 30, sellPrice: 28 },
-    { karat: "22K", buyPrice: 32, sellPrice: 30 },
+    { karat: "21K", buyPrice: 32, sellPrice: 30 },
     { karat: "24K", buyPrice: 33, sellPrice: 31 },
   ])
 
   const [entries, setEntries] = useState<GoldEntry[]>([
     { id: 1, karat: "18K", weight: "", buyTotal: 0, sellTotal: 0, isActive: false },
-    { id: 2, karat: "22K", weight: "", buyTotal: 0, sellTotal: 0, isActive: false },
+    { id: 2, karat: "21K", weight: "", buyTotal: 0, sellTotal: 0, isActive: false },
     { id: 3, karat: "24K", weight: "", buyTotal: 0, sellTotal: 0, isActive: false },
   ])
 
@@ -66,17 +71,33 @@ export default function GoldCalculator() {
     averageSellPrice: 0,
   })
 
+  const fetchLatestExchangeRates = useCallback(async () => {
+    setIsLoadingRates(true)
+    try {
+      const data = await fetchExchangeRates()
+      if (data && data.rates) {
+        setUsdToSar(data.rates.SAR || 3.75)
+        setUsdToEgp(data.rates.EGP || 30.9)
+      }
+    } catch (err) {
+      console.error("Error fetching exchange rates:", err)
+    } finally {
+      setIsLoadingRates(false)
+    }
+  }, [])
+
   const fetchLatestPrices = useCallback(async () => {
     setIsLoading(true)
     setError(null)
 
     try {
       const goldData = await fetchGoldPrices("USD")
+
       const karatPrices = convertToKaratPrices(goldData.price)
 
       const newInternationalRates: GoldRate[] = [
         { karat: "18K", buyPrice: karatPrices["18K"].buyPrice, sellPrice: karatPrices["18K"].sellPrice },
-        { karat: "22K", buyPrice: karatPrices["22K"].buyPrice, sellPrice: karatPrices["22K"].sellPrice },
+        { karat: "21K", buyPrice: karatPrices["21K"].buyPrice, sellPrice: karatPrices["21K"].sellPrice },
         { karat: "24K", buyPrice: karatPrices["24K"].buyPrice, sellPrice: karatPrices["24K"].sellPrice },
       ]
 
@@ -88,9 +109,9 @@ export default function GoldCalculator() {
           sellPrice: karatPrices["18K"].sellPrice * egyptAdjustmentFactor,
         },
         {
-          karat: "22K",
-          buyPrice: karatPrices["22K"].buyPrice * egyptAdjustmentFactor,
-          sellPrice: karatPrices["22K"].sellPrice * egyptAdjustmentFactor,
+          karat: "21K",
+          buyPrice: karatPrices["21K"].buyPrice * egyptAdjustmentFactor,
+          sellPrice: karatPrices["21K"].sellPrice * egyptAdjustmentFactor,
         },
         {
           karat: "24K",
@@ -112,36 +133,44 @@ export default function GoldCalculator() {
 
   useEffect(() => {
     fetchLatestPrices()
-    const intervalId = setInterval(
+    fetchLatestExchangeRates()
+
+    const goldIntervalId = setInterval(
       () => {
         fetchLatestPrices()
       },
       5 * 60 * 1000,
     )
 
-    return () => clearInterval(intervalId)
-  }, [fetchLatestPrices])
+    const ratesIntervalId = setInterval(
+      () => {
+        fetchLatestExchangeRates()
+      },
+      30 * 60 * 1000,
+    )
+
+    return () => {
+      clearInterval(goldIntervalId)
+      clearInterval(ratesIntervalId)
+    }
+  }, [fetchLatestPrices, fetchLatestExchangeRates])
 
   useEffect(() => {
     if (entries.length > 0) {
-      const calculatedEntries = calculateTotals()
+      const { updatedEntries, summaryData } = calculateTotals(entries)
 
-      setEntries(
-        entries.map((entry, index) => ({
-          ...entry,
-          buyTotal: calculatedEntries[index].buyTotal,
-          sellTotal: calculatedEntries[index].sellTotal,
-        })),
-      )
+      setEntries(updatedEntries)
+
+      setSummary(summaryData)
     }
   }, [currency, egyptRates, internationalRates, usdToSar, usdToEgp])
 
-  const calculateTotals = () => {
+  const calculateTotals = (currentEntries: GoldEntry[]) => {
     let totalWeight = 0
     let totalBuyValue = 0
     let totalSellValue = 0
 
-    const updatedEntries = entries.map((entry) => {
+    const updatedEntries = currentEntries.map((entry) => {
       const weight = Number.parseFloat(entry.weight) || 0
       totalWeight += weight
 
@@ -178,49 +207,29 @@ export default function GoldCalculator() {
     const averageBuyPrice = totalWeight > 0 ? totalBuyValue / totalWeight : 0
     const averageSellPrice = totalWeight > 0 ? totalSellValue / totalWeight : 0
 
-    setSummary({
-      totalWeight,
-      totalBuyValue,
-      totalSellValue,
-      averageBuyPrice,
-      averageSellPrice,
-    })
-
-    return updatedEntries
+    return {
+      updatedEntries,
+      summaryData: {
+        totalWeight,
+        totalBuyValue,
+        totalSellValue,
+        averageBuyPrice,
+        averageSellPrice,
+      },
+    }
   }
 
   const handleWeightChange = (id: number, value: string) => {
+    const sanitizedValue = value === "" ? "" : Math.max(0, Number.parseFloat(value) || 0).toString()
+
     const newEntries = entries.map((entry) =>
-      entry.id === id ? { ...entry, weight: value, isActive: true } : { ...entry, isActive: false },
+      entry.id === id ? { ...entry, weight: sanitizedValue, isActive: true } : { ...entry, isActive: false },
     )
 
-    setEntries(newEntries)
-    const calculatedEntries = calculateTotals()
-    setEntries(
-      newEntries.map((entry, index) => ({
-        ...entry,
-        buyTotal: calculatedEntries[index].buyTotal,
-        sellTotal: calculatedEntries[index].sellTotal,
-      })),
-    )
-  }
+    const { updatedEntries, summaryData } = calculateTotals(newEntries)
 
-  const setSuggestedWeight = (id: number, weight: string) => {
-    const newEntries = entries.map((entry) =>
-      entry.id === id ? { ...entry, weight, isActive: true } : { ...entry, isActive: false },
-    )
-
-    setEntries(newEntries)
-
-    const calculatedEntries = calculateTotals()
-
-    setEntries(
-      newEntries.map((entry, index) => ({
-        ...entry,
-        buyTotal: calculatedEntries[index].buyTotal,
-        sellTotal: calculatedEntries[index].sellTotal,
-      })),
-    )
+    setEntries(updatedEntries)
+    setSummary(summaryData)
   }
 
   const formatCurrency = (value: number): string => {
@@ -275,7 +284,7 @@ export default function GoldCalculator() {
             size="sm"
             onClick={fetchLatestPrices}
             disabled={isLoading}
-            className="mr-2 text-white border-slate-600"
+            className="mr-2 text-black border-slate-600"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
             {isLoading ? translations.updating : translations.refreshPrices}
@@ -321,7 +330,12 @@ export default function GoldCalculator() {
       <div className="bg-slate-700 rounded-lg p-4 mb-6">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center">
-            <h2 className="text-lg font-medium text-white mr-4">{translations.exchangeRates}:</h2>
+            <h2 className="text-lg font-medium text-white mr-4">
+              {translations.exchangeRates}:
+              {isLoadingRates && (
+                <span className="text-sm font-normal ml-2 text-slate-300">({translations.updatingRates})</span>
+              )}
+            </h2>
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex items-center">
                 <Label htmlFor="usd-sar" className="text-white mr-2">
@@ -515,25 +529,13 @@ export default function GoldCalculator() {
                           <div className="flex items-center">
                             <Input
                               type="number"
+                              min="0"
                               value={entry.weight}
                               onChange={(e) => handleWeightChange(entry.id, e.target.value)}
                               placeholder={translations.enterWeight}
                               className="bg-slate-700 border-slate-600 text-white"
                             />
                             <span className="ml-2 text-white">{translations.grams}</span>
-                          </div>
-                          <div className="flex space-x-2">
-                            {["5", "10", "20", "50", "100"].map((weight) => (
-                              <Button
-                                key={weight}
-                                variant="outline"
-                                size="sm"
-                                className="text-xs py-0 h-6 bg-slate-700 hover:bg-slate-600 text-white border-slate-600"
-                                onClick={() => setSuggestedWeight(entry.id, weight)}
-                              >
-                                {weight}g
-                              </Button>
-                            ))}
                           </div>
                         </div>
                       </td>
@@ -573,6 +575,7 @@ export default function GoldCalculator() {
         </CardContent>
       </Card>
 
+      {/* Summary Card */}
       <Card className="bg-[#f5f1e6] border-[#D4AF37]/20">
         <CardHeader>
           <CardTitle className="text-xl font-semibold text-slate-800">{translations.summary}</CardTitle>
