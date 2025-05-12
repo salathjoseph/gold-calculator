@@ -1,3 +1,5 @@
+// Translation keys for the Gold Calculator
+
 export type Locale = "en" | "ar"
 
 export interface Translations {
@@ -41,6 +43,7 @@ export interface Translations {
   }
   error: string
   never: string
+  updatingRates: string
 }
 
 export const en: Translations = {
@@ -84,6 +87,7 @@ export const en: Translations = {
   },
   error: "Failed to fetch latest gold prices. Please try again later.",
   never: "Never",
+  updatingRates: "Updating exchange rates...",
 }
 
 export const ar: Translations = {
@@ -127,6 +131,7 @@ export const ar: Translations = {
   },
   error: "فشل في جلب أحدث أسعار الذهب. يرجى المحاولة مرة أخرى لاحقًا.",
   never: "أبدًا",
+  updatingRates: "جاري تحديث أسعار الصرف...",
 }
 
 export const getTranslations = (locale: Locale): Translations => {

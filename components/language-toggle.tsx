@@ -15,7 +15,7 @@ export function LanguageToggle({ locale, toggleLocale }: LanguageToggleProps) {
       variant="outline"
       size="sm"
       onClick={toggleLocale}
-      className="text-white border-slate-600"
+      className="text-black border-slate-600"
       title={locale === "en" ? "Switch to Arabic" : "Switch to English"}
     >
       <Languages className="h-4 w-4 mr-2" />

@@ -13,6 +13,7 @@ export function useTranslations() {
     setTranslations(newTranslations)
     setDir(locale === "ar" ? "rtl" : "ltr")
 
+    // Update document direction
     document.documentElement.dir = locale === "ar" ? "rtl" : "ltr"
     document.documentElement.lang = locale
   }, [locale])

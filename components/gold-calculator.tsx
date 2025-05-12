@@ -9,7 +9,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Button } from "@/components/ui/button"
 import { RefreshCw, Settings, HelpCircle, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import Image from "next/image"
 import { fetchGoldPrices, convertToKaratPrices, fetchExchangeRates } from "@/lib/api"
 import { useTranslations } from "@/lib/i18n/use-translations"
 import { LanguageToggle } from "./language-toggle"
@@ -271,7 +270,7 @@ export default function GoldCalculator() {
       <div className="flex flex-col md:flex-row items-center justify-between mb-8">
         <div className="flex items-center mb-4 md:mb-0">
           <div className="w-16 h-16 mr-4">
-            <Image src="/assets/logo/logo.png" alt="Gold Logo" width={64} height={64} className="object-contain" />
+            <img src="/assets/logo/logo.png" alt="Gold Logo" width={64} height={64} />
           </div>
           <h1 className="text-3xl font-semibold text-[#D4AF37]">{translations.title}</h1>
         </div>

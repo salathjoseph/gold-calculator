@@ -2,9 +2,9 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'gold-calculator',
-  description: 'gold-calculator',
-  generator: 'gold-calculator',
+  title: 'Gold Calulator',
+  description: 'Gold price calculator',
+  generator: 'Gold Calulator',
 }
 
 export default function RootLayout({
