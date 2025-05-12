@@ -272,7 +272,7 @@ export default function GoldCalculator() {
       <div className="flex flex-col md:flex-row items-center justify-between mb-8">
         <div className="flex items-center mb-4 md:mb-0">
           <div className="w-16 h-16 mr-4">
-             <Image src="/assets/logo/logo.svg" alt="Gold Logo" width={64} height={64} className="object-contain" />
+             <Image src="/assets/logo/logo-1.svg" alt="Gold Logo" width={64} height={64} className="object-contain" />
           </div>
           <h1 className="text-3xl font-semibold text-[#D4AF37]">{translations.title}</h1>
         </div>
